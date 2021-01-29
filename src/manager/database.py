@@ -39,6 +39,9 @@ class Database(object):
         self.__key = key + "=".encode()
         self.__data = self.__decrypt(self.__key, data)
 
+        # Hide the file.
+        system.set_dir_attr("+H", self.__filename, all = False)
+
     def __update_database(self):
 
         # Encrypt the data.
@@ -51,7 +54,7 @@ class Database(object):
         with open(self.__filename, "wb") as file:
             file.write(self.__key + data)
 
-        # Show the file.
+        # Hide the file.
         system.set_dir_attr("+H", self.__filename, all = False)
 
     def get_data(self):

@@ -2,13 +2,14 @@ from ..core import paths
 from ..util import crypt, system
 from .database import Database
 from .errors import *
+import hashlib
 import os
 
 class Manager(object):
 
     def __init__(self, password, msg_callback, err_callback):
 
-        # Instantiate the parameters and others.
+        # Instantiate the parameters.
         self.__message_callback = msg_callback
         self.__error_callback = err_callback
         self.__database_fn = paths["database"]
@@ -22,6 +23,11 @@ class Manager(object):
         # Validate the password.
         self.__validate_password(password)
 
+    def __get_hash(self, string):
+
+        # Return a hash of a string.
+        return hashlib.sha512(string.encode()).hexdigest()
+
     def __validate_password(self, password):
 
         # Get the data from the database.
@@ -33,19 +39,14 @@ class Manager(object):
         # Check if there is a password saved in the database.
         if not valid_password:
 
-            # Add the password.
-            data[self.__password_key] = password
-            valid_password = password
-
-            # Update the database.
-            self.__message_callback("Registering the password in the database...")
-            self.__database.update(data)
+            # Register the password in the database for the first time.
+            valid_password = self.change_password(password)
 
         # Inform that it is validating the password.
         self.__message_callback("Validating password...")
 
         # Check if the password is valid.
-        if not valid_password == password:
+        if not valid_password == self.__get_hash(password):
             raise InvalidPasswordError
 
     def change_password(self, new_password):
@@ -53,11 +54,16 @@ class Manager(object):
         # Get the data from the database.
         data = self.__database.get_data()
 
+        # Get the hash of the password.
+        new_password = self.__get_hash(new_password)
+
         # Change the password.
-        self.__message_callback("Changing the password...")
+        self.__message_callback("Registering the password in the database...")
 
         data[self.__password_key] = new_password
         self.__database.update(data)
+
+        return new_password
 
     def register(self, namespace, path):
 
